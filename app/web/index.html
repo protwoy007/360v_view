@@ -34,7 +34,7 @@ main{max-width:1000px;margin:0 auto;padding:44px 28px 90px}
   <section style="margin-bottom:52px"><div class="step"><b>02</b><h2>Render settings</h2></div>
    <div class="opt"><span class="label">Mode</span><div class="seg" id="mode"><button data-v="auto" class="on">Auto</button><button data-v="cpu">CPU</button><button data-v="gpu" id="gpub">GPU</button></div></div>
    <div class="opt"><span class="label">Size</span><div class="seg" id="width"><button data-v="2048" class="on">Preview 2048</button><button data-v="4096">Full 4096</button></div></div>
-   <div class="opt"><span class="label">Camera field of view</span><input id="fov" type="number" value="65" min="30" max="120"> <span class="mute">degrees</span></div></section>
+   </section>
   <section><div class="step"><b>03</b><h2>Captured spots</h2></div><div id="list"><p class="empty">Nothing yet. Capture on the phone, then press Send to PC.</p></div></section>
  </div></div></main>
 <dialog id="dlg"><h2>Pano360</h2><p class="mute">Version 1.0</p>
@@ -53,7 +53,7 @@ fetch('/api/info').then(r=>r.json()).then(i=>{
  if(!i.gpu){$('gpub').disabled=true;$('gpub').title='No NVIDIA GPU found'}});
 async function render(n){
  const r=await fetch('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({session:n,mode:val.mode,width:+val.width,fov:+$('fov').value})});
+  body:JSON.stringify({session:n,mode:val.mode,width:+val.width,fov:65})});
  if(!r.ok)alert((await r.json()).detail);load()}
 async function load(){
  const L=await (await fetch('/api/sessions')).json();if(!L.length)return;
@@ -61,7 +61,7 @@ async function load(){
  for(const s of L){const j=s.job||{},run=j.state==='running',e=document.createElement('div');e.className='sp';
   const h=document.createElement('h3');h.textContent=s.name.replace(/_/g,' ');
   const m=document.createElement('div');m.className='meta';
-  m.textContent=s.count+' photos, '+(run?'rendering...':j.state==='error'?j.msg:j.state==='done'?'done on '+j.backend+' in '+j.secs+' s, '+Math.round(j.coverage*100)+'% covered':s.rendered?'rendered earlier':'not rendered yet');
+  m.textContent=s.count+' photos, '+(run?(j.msg||'starting')+'...':j.state==='error'?j.msg:j.state==='done'?'done on '+j.backend+' in '+j.secs+' s, '+j.aligned+' of '+j.photos+' photos aligned':s.rendered?'rendered earlier':'not rendered yet');
   if(j.state==='error')m.className+=' warn';
   const a=document.createElement('div');a.className='acts';
   const b=document.createElement('button');b.className='btn'+(s.rendered?'':' solid');b.textContent=s.rendered?'Render again':'Render';b.disabled=run;b.onclick=()=>render(s.name);a.append(b);

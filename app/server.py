@@ -139,8 +139,9 @@ def start(r: RenderReq):
 
     def work():
         try:
+            def prog(m): JOBS[s] = {"state": "running", "msg": m}
             JOBS[s] = {"state": "done", **render.render(d, DATA / "out" / f"{s}.jpg", r.mode,
-                                                        min(max(r.width, 512), 8192), r.fov)}
+                                                        min(max(r.width, 512), 8192), r.fov, progress=prog)}
         except Exception as e:
             JOBS[s] = {"state": "error", "msg": str(e)}
     threading.Thread(target=work, daemon=True).start()

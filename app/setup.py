@@ -9,7 +9,7 @@ REQ = ROOT / "app" / "requirements.txt"
 LIB = ROOT / "app" / "web" / "lib"
 GPU_TRIED = VENV / ".gpu-tried"
 PANN = ["https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.min.", "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum."]
-CHECK = ("import importlib.util as u,fastapi,uvicorn,numpy,PIL,qrcode,cryptography;"
+CHECK = ("import importlib.util as u,fastapi,uvicorn,numpy,PIL,qrcode,cryptography,cv2,scipy;"
          "assert u.find_spec('python_multipart') or u.find_spec('multipart')")
 
 

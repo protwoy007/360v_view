@@ -5,3 +5,5 @@ numpy
 pillow
 qrcode
 cryptography
+opencv-python-headless
+scipy

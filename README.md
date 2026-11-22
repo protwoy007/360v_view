@@ -6,11 +6,11 @@ Capture a full 360 sphere with your phone, then render it into a viewable panora
 
 1. **Phone app (Android)** guides you with on-screen rings. Point at a ring, hold still, and it takes the photo by itself. Dark or blurry shots are rejected so you can retake them. Photos and the phone's orientation for each shot are stored on the phone, so you can capture on a trip with no PC around.
 2. **Back home**, run the PC app, scan its QR code from the phone app, and press **Send to PC**.
-3. **The PC** places every photo on a sphere using the recorded orientation and writes one equirectangular image. Open it in the built-in 360 viewer.
+3. **The PC** starts from the phone's recorded orientation, then matches features between overlapping photos (SIFT) and solves every rotation and the lens field of view together, evens out exposure and colour, and blends the photos in two bands so seams and ghosting disappear. The result is one equirectangular image, shown in the built-in 360 viewer.
 
 The renderer has two modes, chosen automatically or by hand on the PC page:
 
-- **CPU** works everywhere (NumPy).
+- **CPU** works everywhere (NumPy and OpenCV).
 - **GPU** uses an NVIDIA card through CuPy and falls back to CPU if anything fails.
 
 ## Run the PC app
@@ -44,7 +44,8 @@ apk/                 Capacitor wrapper that builds the Android app
 
 ## Known limits
 
-- Photos are placed using the phone's gyroscope only, with no image matching, so expect small seams or exposure differences.
+- Alignment needs texture to match on. Blank walls, sky, water or a moving crowd give few matches, and those photos fall back to the phone's orientation, so seams can show there.
+- Close objects shift between shots (parallax), so keep the phone turning on the spot.
 - The phone and the PC must be on the same Wi-Fi to send photos.
 - Tested on Linux with CPU rendering. The GPU path, Windows launcher and the Android build have not been verified on every setup.
 
