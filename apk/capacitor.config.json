@@ -1,0 +1,7 @@
+{
+  "appId": "com.khaled.pano360",
+  "appName": "Pano360",
+  "webDir": "www",
+  "server": { "androidScheme": "http", "cleartext": true },
+  "android": { "allowMixedContent": true }
+}

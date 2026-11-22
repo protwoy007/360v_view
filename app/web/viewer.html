@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>360 view</title><link rel="stylesheet" href="lib/theme.css"><link rel="stylesheet" href="/lib/pannellum.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.min.css">
+<style>html,body{margin:0;height:100%}#p{width:100%;height:100%}.btn{position:fixed;z-index:9;top:16px;left:16px;background:#050a12cc}</style>
+<a class="btn" href="/">Back</a><div id="p"></div>
+<script>
+const s=new URLSearchParams(location.search).get('s');
+function go(){pannellum.viewer('p',{type:'equirectangular',panorama:'/out/'+encodeURIComponent(s)+'.jpg?'+Date.now(),autoLoad:true,haov:360,vaov:180})}
+function ld(u,fail){const e=document.createElement('script');e.src=u;e.onload=go;e.onerror=fail;document.head.append(e)}
+ld('/lib/pannellum.js',()=>ld('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.min.js',()=>document.body.append('360 viewer library not available. Connect to the internet once and reload.')));
+</script></html>

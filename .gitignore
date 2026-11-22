@@ -1,0 +1,10 @@
+# generated on your machine, never commit these
+data/
+.venv/
+__pycache__/
+*.pem
+apk/node_modules/
+apk/android/
+apk/www/
+apk/package-lock.json
+*.apk

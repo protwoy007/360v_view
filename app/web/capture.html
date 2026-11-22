@@ -1,0 +1,210 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050a12">
+<title>Pano360</title><link rel="stylesheet" href="lib/theme.css">
+<style>
+#home{max-width:520px;margin:0 auto;padding:max(env(safe-area-inset-top),26px) 24px 56px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:34px}
+.head h1{font-size:54px;line-height:1}.head h1 i{font-style:normal;color:var(--ice)}
+.head p{margin-top:8px;color:var(--mute);max-width:260px}
+section{margin-top:30px}section .label{margin-bottom:6px}
+.stat{font-size:15px;color:var(--mute);margin:2px 0 14px}.stat.ok{color:var(--ice)}
+.acts{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+.item{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.item b{font:500 22px var(--serif)}.item span{color:var(--mute);font-size:14px}
+#msg{margin-top:14px;min-height:22px;font-size:15px;color:var(--ice)}
+#cam,#scn{position:fixed;inset:0;background:#000;z-index:5}
+#v,#ov,#sv{position:absolute;inset:0;width:100%;height:100%}#v,#sv{object-fit:cover}
+#hud{position:absolute;top:0;left:0;right:0;padding:max(env(safe-area-inset-top),14px) 20px 16px;display:flex;align-items:baseline;gap:16px;
+ background:linear-gradient(#050a12ee,#050a1200)}
+#cnt{font:500 40px/1 var(--serif)}#cnt small{font-size:20px;color:var(--mute)}
+#hint{font-size:18px;letter-spacing:.03em}
+#bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:12px;justify-content:center;padding:34px 20px max(env(safe-area-inset-bottom),20px);
+ background:linear-gradient(#050a1200,#050a12ee)}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:rgba(155,216,255,.38);display:flex;align-items:center;justify-content:center;
+ font:500 90px var(--serif);color:#fff;text-shadow:0 0 30px rgba(47,143,216,.9)}
+#flash.on{animation:fl .55s ease-out}#flash.bad{background:rgba(229,138,123,.30)}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+#toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);background:#0a1626ee;border:1px solid var(--ice);padding:8px 18px;border-radius:2px;font-size:15px;opacity:0;transition:opacity .2s;white-space:nowrap}
+#toast.on{opacity:1}
+#frame{position:absolute;left:50%;top:46%;width:66vmin;height:66vmin;transform:translate(-50%,-50%);border:1px solid var(--ice);
+ box-shadow:0 0 0 100vmax rgba(5,10,18,.62)}
+#stxt{position:absolute;left:0;right:0;top:calc(46% + 38vmin);text-align:center;color:var(--ink)}
+</style>
+<main id="home">
+<div class="head"><div><h1>Pano<i>360</i></h1><p>Capture a full sphere. Render it on your PC.</p></div><button class="ibtn" id="info" aria-label="About">i</button></div>
+
+<section id="pcw" hidden><div class="label">PC connection</div>
+<div class="stat" id="pcstat">Not connected</div>
+<input id="pc" placeholder="or type 192.168.0.5:8000" inputmode="url">
+<div class="acts"><button class="btn solid" id="scan">Scan QR</button></div></section>
+
+<section><div class="label">New capture</div>
+<input id="spot" value="Spot 1" aria-label="Spot name">
+<div class="acts"><button class="btn solid" id="go">Start capturing</button></div>
+<p class="mute" style="margin-top:12px;font-size:14px">Hold the phone upright. Point at each ring and keep still, it shoots by itself.</p></section>
+
+<section><div class="label">On this phone</div><div id="list"></div>
+<div class="acts"><button class="btn" id="send">Send to PC</button><button class="btn quiet" id="clear">Delete sent</button></div>
+<p id="msg"></p></section>
+</main>
+
+<section id="cam" hidden><video id="v" playsinline muted></video><canvas id="ov"></canvas>
+<div id="hud"><div id="cnt"></div><div id="hint"></div></div><div id="toast"></div><div id="flash"></div>
+<div id="bar"><button class="btn quiet" id="keep" hidden>Keep anyway</button><button class="btn solid" id="done">Done</button></div></section>
+
+<section id="scn" hidden><video id="sv" playsinline muted></video><div id="frame"></div>
+<p id="stxt">Point at the QR code on the PC page</p>
+<div id="bar"><button class="btn" id="scancancel">Cancel</button></div></section>
+
+<dialog id="dlg"><h2>Pano360</h2><p class="mute">Version 1.0</p>
+<div class="row"><b>Developer</b><span id="i-name"></span></div>
+<div class="row"><b>Study</b><span id="i-study"></span></div>
+<div class="row"><b>GitHub</b><span id="i-git"></span></div>
+<div class="row"><b>How it works</b><span class="mute">Photos stay on this phone until you send them to your PC. Nothing runs in the background.</span></div>
+<div class="acts"><button class="btn" id="dclose">Close</button></div></dialog>
+
+<script src="lib/jsqr.js"></script>
+<script>
+/* edit your details here */
+const INFO={name:'Khaled (Protwoy)',study:'Computer Science & Engineering, Daffodil International University',git:'github.com/protwoy007'};
+$=id=>document.getElementById(id);const D2R=Math.PI/180,FOV=65;
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+$('i-name').textContent=INFO.name;$('i-study').textContent=INFO.study;$('i-git').textContent=INFO.git;
+$('info').onclick=()=>$('dlg').showModal();$('dclose').onclick=()=>$('dlg').close();
+
+const T=[];for(let a=0;a<360;a+=45)T.push({az:a,el:0});
+for(let a=0;a<360;a+=60){T.push({az:a,el:45});T.push({az:a+30,el:-45})}
+T.push({az:0,el:90},{az:0,el:-90});
+T.forEach(t=>{const e=t.el*D2R,a=t.az*D2R;t.d=[Math.cos(e)*Math.sin(a),Math.cos(e)*Math.cos(a),Math.sin(e)]});
+
+/* feedback: vibration (native in the app), beep, flash */
+function buzz(ms){try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Haptics;if(H&&H.vibrate){H.vibrate({duration:ms});return}}catch(e){}navigator.vibrate&&navigator.vibrate(ms)}
+let ac;function beep(f,d){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();
+ const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.frequency.value=f;g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d)}catch(e){}}
+function flash(txt,bad){const f=$('flash');f.textContent=txt;f.className='';void f.offsetWidth;f.className='on'+(bad?' bad':'')}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1400)}
+
+/* storage: photos stay in this browser until sent */
+const dbp=new Promise((ok,no)=>{const r=indexedDB.open('pano',1);r.onupgradeneeded=()=>r.result.createObjectStore('shots',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+async function st(mode,fn){const d=await dbp;return new Promise((ok,no)=>{const t=d.transaction('shots',mode),r=fn(t.objectStore('shots'));t.oncomplete=()=>ok(r.result);t.onerror=()=>no(t.error)})}
+const all=()=>st('readonly',s=>s.getAll()),put=o=>st('readwrite',s=>s.put(o)),del=k=>st('readwrite',s=>s.delete(k));
+const msg=t=>$('msg').textContent=t;
+async function list(){
+ const g={};for(const r of await all()){(g[r.session]??={n:0,s:0}).n++;if(r.sent)g[r.session].s++}
+ $('list').replaceChildren();
+ const k=Object.keys(g);if(!k.length){const p=document.createElement('p');p.className='mute';p.textContent='No photos yet.';$('list').append(p)}
+ for(const n of k){const d=document.createElement('div');d.className='item';const b=document.createElement('b');b.textContent=n;
+  const s=document.createElement('span');s.textContent=g[n].n+' photos, '+g[n].s+' sent';d.append(b,s);$('list').append(d)}}
+list();
+
+/* PC address: filled by scanning the QR on the PC page (app only) */
+const PC=()=>{let a=$('pc').value.trim();if(!a)return'';if(!/^https?:/.test(a))a='http://'+a;return a.replace(/\/$/,'')};
+const stat=(t,ok)=>{$('pcstat').textContent=t;$('pcstat').className='stat'+(ok?' ok':'')};
+async function check(){const a=PC();if(!a)return stat('Not connected');stat('Checking...');
+ try{const c=new AbortController();setTimeout(()=>c.abort(),4000);const r=await fetch(a+'/api/info',{signal:c.signal});if(!r.ok)throw 0;stat('Connected to '+$('pc').value.trim(),true)}
+ catch(e){stat('Cannot reach '+$('pc').value.trim()+'. Same Wi-Fi?')}}
+if(location.hostname==='localhost'){$('pcw').hidden=false;$('pc').value=localStorage.pc||'';
+ $('pc').onchange=()=>{localStorage.pc=$('pc').value.trim();check()};if($('pc').value)check()}
+
+let sstream=null,son=false;const sc=document.createElement('canvas'),sx=sc.getContext('2d',{willReadFrequently:true});
+$('scan').onclick=async()=>{
+ try{sstream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})}
+ catch(e){return alert('Camera is blocked. Allow the camera for this app.')}
+ $('sv').srcObject=sstream;await $('sv').play();$('scn').hidden=false;son=true;scanLoop()};
+function stopScan(){son=false;sstream&&sstream.getTracks().forEach(t=>t.stop());sstream=null;$('sv').srcObject=null;$('scn').hidden=true}
+$('scancancel').onclick=stopScan;
+function parseQR(t){try{const u=new URL(t);return u.searchParams.get('app')||(u.hostname+':8000')}catch(e){return/^[\d.]+:\d+$/.test(t.trim())?t.trim():''}}
+function scanLoop(){if(!son)return;const v=$('sv');
+ if(v.videoWidth&&window.jsQR){const k=Math.min(1,640/v.videoWidth);sc.width=Math.round(v.videoWidth*k);sc.height=Math.round(v.videoHeight*k);sx.drawImage(v,0,0,sc.width,sc.height);
+  const im=sx.getImageData(0,0,sc.width,sc.height),r=jsQR(im.data,im.width,im.height);
+  if(r&&r.data){const a=parseQR(r.data);if(a){stopScan();$('pc').value=a;localStorage.pc=a;buzz(80);beep(880,.12);check();return}}}
+ setTimeout(scanLoop,150)}
+
+/* orientation -> camera axes in world coordinates (W3C Z-X'-Y'' angles) */
+function mat(a,b,g){a*=D2R;b*=D2R;g*=D2R;
+ const ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),cg=Math.cos(g),sg=Math.sin(g);
+ return{right:[ca*cg-sa*sb*sg,sa*cg+ca*sb*sg,-cb*sg],up:[-sa*cb,ca*cb,sb],
+  fwd:[-(ca*sg+sa*sb*cg),-(sa*sg-ca*sb*cg),-cb*cg]}}
+let R=null,on=false,busy=false,spot='',done=new Set(),best=-1,steady=0,prev=null,pending=null,stream=null,evn='';
+const onOri=e=>{if(e.alpha!=null)R=mat(e.alpha,e.beta,e.gamma)};
+
+$('go').onclick=async()=>{
+ spot=$('spot').value.trim()||'Spot';
+ try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
+ try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission&&await DeviceOrientationEvent.requestPermission()!=='granted')throw 0}
+ catch(e){return alert('Motion access is needed to guide you.')}
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false})}
+ catch(e){return alert('Camera is blocked. Allow the camera and try again.')}
+ done=new Set((await all()).filter(r=>r.session===spot).map(r=>r.tgt));
+ $('v').srcObject=stream;await $('v').play();
+ evn='ondeviceorientationabsolute' in window?'deviceorientationabsolute':'deviceorientation';
+ addEventListener(evn,onOri);R=null;prev=null;steady=0;busy=false;on=true;
+ $('home').hidden=true;$('cam').hidden=false;loop()};
+$('done').onclick=()=>{on=false;removeEventListener(evn,onOri);stream.getTracks().forEach(t=>t.stop());$('v').srcObject=null;
+ $('cam').hidden=true;$('home').hidden=false;list()};
+$('keep').onclick=async()=>{if(pending){const p=pending;pending=null;$('keep').hidden=true;await save(p.i,p.c,p.Rs)}};
+
+function loop(){if(!on)return;draw();step();requestAnimationFrame(loop)}
+function draw(){
+ const o=$('ov'),W=o.width=innerWidth,H=o.height=innerHeight,x=o.getContext('2d');
+ $('cnt').innerHTML=String(done.size).padStart(2,'0')+' <small>/ '+T.length+'</small>';
+ if(!R){$('hint').textContent='Move the phone slowly...';return}
+ const F=(H/2)/Math.tan(FOV/2*D2R);best=-1;let bm=0;
+ T.forEach((t,i)=>{if(!done.has(i)){const c=dot(t.d,R.fwd);if(best<0||c>bm){best=i;bm=c}}});
+ T.forEach((t,i)=>{const z=dot(t.d,R.fwd);if(z<.05)return;
+  const sx=W/2+F*dot(t.d,R.right)/z,sy=H/2-F*dot(t.d,R.up)/z;
+  x.beginPath();x.arc(sx,sy,i===best?24:15,0,7);
+  if(done.has(i)){x.fillStyle='#9bd8ff';x.fill()}
+  else if(i===best){x.lineWidth=4;x.strokeStyle='#9bd8ff';x.shadowColor='#2f8fd8';x.shadowBlur=18;x.stroke();x.shadowBlur=0}
+  else{x.lineWidth=2;x.strokeStyle='rgba(243,246,249,.6)';x.stroke()}});
+ x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.arc(W/2,H/2,6,0,7);x.stroke();
+ if(best<0){$('hint').textContent='Sphere complete. Tap Done.';return}
+ const f=R.fwd,t=T[best],ca=Math.atan2(f[0],f[1])/D2R,ce=Math.asin(Math.max(-1,Math.min(1,f[2])))/D2R;
+ const da=((t.az-ca+540)%360)-180,de=t.el-ce;let h='';
+ if(Math.abs(t.el)<90&&Math.abs(da)>3)h+=(da>0?'→ ':'← ')+Math.abs(da|0)+'°   ';
+ if(Math.abs(de)>3)h+=(de>0?'↑ ':'↓ ')+Math.abs(de|0)+'°';
+ if(!pending)$('hint').textContent=h||'Hold still...'}
+function step(){
+ if(busy||!R||best<0)return;
+ const f=R.fwd,ang=Math.acos(Math.min(1,dot(f,T[best].d)))/D2R,sp=prev?Math.acos(Math.min(1,dot(f,prev)))/D2R:9;prev=f;
+ steady=ang<5&&sp<.5?steady+1:0;
+ if(steady>=10){steady=0;shoot(best)}}
+
+function grab(){
+ const v=$('v'),w=v.videoWidth,h=v.videoHeight,s=Math.min(1,1600/Math.max(w,h)),c=document.createElement('canvas'),
+  sw=Math.round(w*s),sh=Math.round(h*s);
+ if(w>h){c.width=sh;c.height=sw;const x=c.getContext('2d');x.translate(sh,0);x.rotate(Math.PI/2);x.drawImage(v,0,0,sw,sh)}
+ else{c.width=sw;c.height=sh;c.getContext('2d').drawImage(v,0,0,sw,sh)}
+ return c}
+function quality(c){
+ const s=document.createElement('canvas');s.width=320;s.height=Math.round(320*c.height/c.width);
+ const x=s.getContext('2d',{willReadFrequently:true});x.drawImage(c,0,0,s.width,s.height);
+ const d=x.getImageData(0,0,s.width,s.height).data,w=s.width,h=s.height,g=new Float32Array(w*h);let m=0;
+ for(let i=0;i<w*h;i++){g[i]=.3*d[4*i]+.59*d[4*i+1]+.11*d[4*i+2];m+=g[i]}
+ if(m/w/h<35)return'Too dark';
+ let a=0,b=0,n=0;
+ for(let y=1;y<h-1;y++)for(let X=1;X<w-1;X++){const i=y*w+X,l=4*g[i]-g[i-1]-g[i+1]-g[i-w]-g[i+w];a+=l;b+=l*l;n++}
+ return b/n-(a/n)**2<30?'Blurry':''}
+async function shoot(i){
+ busy=true;const c=grab(),Rs={right:[...R.right],up:[...R.up],fwd:[...R.fwd]},q=quality(c);
+ if(q){pending={i,c,Rs};$('hint').textContent=q+', hold still and try again';$('keep').hidden=false;
+  flash('',true);toast(q+', not saved');buzz(40);setTimeout(()=>buzz(40),140);beep(300,.2);setTimeout(()=>busy=false,1500);return}
+ await save(i,c,Rs)}
+async function save(i,c,Rs){
+ const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.88));
+ await put({id:spot+'|'+i,session:spot,tgt:i,blob,...Rs,w:c.width,h:c.height,sent:false});
+ done.add(i);pending=null;$('keep').hidden=true;busy=false;
+ const fin=done.size===T.length;
+ flash(done.size,false);toast(fin?'All '+T.length+' captured':'Saved '+done.size+' of '+T.length);
+ buzz(fin?300:90);beep(fin?1175:880,fin?.35:.12)}
+
+$('send').onclick=async()=>{
+ const rows=(await all()).filter(r=>!r.sent);if(!rows.length)return msg('Nothing new to send.');let n=0;
+ for(const r of rows){const f=new FormData();f.append('session',r.session);f.append('shot',r.id);
+  f.append('meta',JSON.stringify({right:r.right,up:r.up,fwd:r.fwd,w:r.w,h:r.h}));f.append('file',r.blob,'p.jpg');
+  try{const res=await fetch(PC()+'/api/upload',{method:'POST',body:f});if(!res.ok)throw 0;r.sent=true;await put(r);msg('Sent '+(++n)+' of '+rows.length)}
+  catch(e){return msg(location.hostname==='localhost'?'Cannot reach the PC. Scan its QR code first.':'Cannot reach the PC. Open this page from the QR code on the PC.')}}
+ msg('All photos sent.');list()};
+$('clear').onclick=async()=>{for(const r of await all())if(r.sent)await del(r.id);msg('Deleted sent photos.');list()};
+</script></html>
